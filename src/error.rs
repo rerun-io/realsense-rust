@@ -137,18 +137,18 @@ macro_rules! check_rs2_error {
     ($rs2_error:expr, $result:expr) => {
         // We make this alias here to type check $rs2_error.
         {
-            use crate::kind::Rs2Exception;
             use num_traits::FromPrimitive;
             use std::convert::TryInto;
+            use $crate::kind::Rs2Exception;
             let err: *mut sys::rs2_error = $rs2_error;
             if err.as_ref().is_some() {
+                let realsense_exception_type = sys::rs2_get_librealsense_exception_type(err);
+                let realsense_exception_type_i32 = realsense_exception_type.try_into().unwrap();
+
                 let res = $result(
-                    Rs2Exception::from_i32(
-                        sys::rs2_get_librealsense_exception_type(err)
-                            .try_into()
-                            .unwrap(),
-                    )
-                    .unwrap(),
+                    Rs2Exception::from_i32(realsense_exception_type_i32).unwrap_or_else(|| {
+                        panic!("Unknown Rs2Exception: {}", realsense_exception_type_i32)
+                    }),
                     std::ffi::CStr::from_ptr(sys::rs2_get_error_message(err))
                         .to_str()
                         .unwrap()
